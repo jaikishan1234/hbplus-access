@@ -1,4 +1,5 @@
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '../context/AuthContext';
 import DashboardScreen from '../screens/DashboardScreen';
@@ -6,6 +7,22 @@ import LoginScreen from '../screens/LoginScreen';
 
 export default function AppNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (
+      Platform.OS !== 'web' ||
+      typeof window === 'undefined' ||
+      isLoading
+    ) {
+      return;
+    }
+
+    const targetPath = isAuthenticated ? '/dashboard' : '/';
+
+    if (window.location.pathname !== targetPath) {
+      window.history.replaceState({}, '', targetPath);
+    }
+  }, [isAuthenticated, isLoading]);
 
   if (isLoading) {
     return (
