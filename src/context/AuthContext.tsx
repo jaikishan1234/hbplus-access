@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import { Platform } from 'react-native';
+import { FirebaseError } from 'firebase/app';
 import {
   GoogleAuthProvider,
   onAuthStateChanged,
@@ -23,6 +24,28 @@ export const UNAUTHORIZED_ACCOUNT_MESSAGE =
 
 const NATIVE_CONFIGURATION_MESSAGE =
   'Google sign-in is not configured for this native build yet. Add the Expo OAuth packages, app scheme, and platform client IDs before using mobile sign-in.';
+
+function getGoogleSignInErrorMessage(error: unknown): string {
+  if (!(error instanceof FirebaseError)) {
+    return 'Unable to sign in with Google. Please try again.';
+  }
+
+  switch (error.code) {
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return 'Sign-in was cancelled.';
+    case 'auth/popup-blocked':
+      return 'Google sign-in was blocked by the browser. Please allow popups and try again.';
+    case 'auth/unauthorized-domain':
+      return 'This app domain is not authorized in Firebase Authentication.';
+    case 'auth/network-request-failed':
+      return 'A network error prevented Google sign-in. Check your connection and try again.';
+    case 'auth/account-exists-with-different-credential':
+      return 'This account already uses a different sign-in method.';
+    default:
+      return 'Google sign-in failed. Please try again.';
+  }
+}
 
 export interface AuthContextValue {
   user: User | null;
@@ -91,7 +114,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       } else if (signInError instanceof Error && signInError.message === NATIVE_CONFIGURATION_MESSAGE) {
         setError(NATIVE_CONFIGURATION_MESSAGE);
       } else {
-        setError('Unable to sign in with Google. Please try again.');
+        setError(getGoogleSignInErrorMessage(signInError));
       }
     } finally {
       setIsSigningIn(false);

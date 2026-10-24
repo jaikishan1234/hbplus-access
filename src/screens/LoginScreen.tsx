@@ -37,7 +37,6 @@ export default function LoginScreen() {
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <View style={styles.restrictionNote}>
-            <View style={styles.lockDot} />
             <Text style={styles.restrictionText}>
               Access is restricted to authorized @hbplus.fit accounts.
             </Text>
@@ -158,14 +157,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     textAlign: 'center',
-  },
-  lockDot: {
-    width: 6,
-    height: 6,
-    marginTop: 6,
-    marginRight: 8,
-    borderRadius: 3,
-    backgroundColor: '#C9242B',
   },
   restrictionText: {
     flex: 1,

@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text } from 'react-native';
 
 interface GoogleSignInButtonProps {
   disabled?: boolean;
@@ -18,13 +18,19 @@ export default function GoogleSignInButton({
       accessibilityState={{ busy: loading, disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, disabled && styles.buttonDisabled]}
+      style={({ pressed }) => [
+        styles.button,
+        pressed && styles.buttonPressed,
+        disabled && styles.buttonDisabled,
+      ]}
     >
-      <View style={styles.icon}>
-        <Text style={styles.iconText}>G</Text>
-      </View>
+      <Image
+        accessibilityElementsHidden
+        source={require('../../assets/google-g-logo.png')}
+        style={styles.googleIcon}
+      />
       <Text style={styles.buttonText}>
-        {loading ? 'Signing in…' : 'Continue with Google'}
+        {loading ? 'Signing in...' : 'Continue with Google'}
       </Text>
     </Pressable>
   );
@@ -36,37 +42,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#DADCE0',
     borderRadius: 13,
-    backgroundColor: '#C9242B',
-    shadowColor: '#C9242B',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 3,
+    backgroundColor: '#FFFFFF',
   },
   buttonPressed: {
-    backgroundColor: '#A91E24',
+    backgroundColor: '#F8F9FA',
     transform: [{ scale: 0.99 }],
   },
   buttonDisabled: {
     opacity: 0.65,
   },
-  icon: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+  googleIcon: {
+    width: 20,
+    height: 20,
     marginRight: 10,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  iconText: {
-    color: '#4285F4',
-    fontSize: 16,
-    fontWeight: '800',
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#3C4043',
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.1,
