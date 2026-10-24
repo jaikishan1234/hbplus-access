@@ -6,7 +6,7 @@ import DashboardScreen from '../screens/DashboardScreen';
 import LoginScreen from '../screens/LoginScreen';
 
 export default function AppNavigator() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isSigningIn } = useAuth();
 
   useEffect(() => {
     if (
@@ -17,12 +17,12 @@ export default function AppNavigator() {
       return;
     }
 
-    const targetPath = isAuthenticated ? '/dashboard' : '/';
+    const targetPath = isAuthenticated && !isSigningIn ? '/dashboard' : '/';
 
     if (window.location.pathname !== targetPath) {
       window.history.replaceState({}, '', targetPath);
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, isSigningIn]);
 
   if (isLoading) {
     return (
@@ -32,7 +32,7 @@ export default function AppNavigator() {
     );
   }
 
-  return isAuthenticated ? <DashboardScreen /> : <LoginScreen />;
+  return isAuthenticated && !isSigningIn ? <DashboardScreen /> : <LoginScreen />;
 }
 
 const styles = StyleSheet.create({

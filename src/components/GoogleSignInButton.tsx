@@ -1,4 +1,4 @@
-import { Image, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text } from 'react-native';
 
 interface GoogleSignInButtonProps {
   disabled?: boolean;
@@ -29,6 +29,7 @@ export default function GoogleSignInButton({
         source={require('../../assets/google-g-logo.png')}
         style={styles.googleIcon}
       />
+      {loading ? <ActivityIndicator color="#3C4043" size="small" style={styles.loadingIndicator} /> : null}
       <Text style={styles.buttonText}>
         {loading ? 'Signing in...' : 'Continue with Google'}
       </Text>
@@ -64,5 +65,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.1,
+  },
+  loadingIndicator: {
+    marginRight: 8,
   },
 });
