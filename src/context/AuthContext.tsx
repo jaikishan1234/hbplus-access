@@ -7,7 +7,6 @@ import {
   useState,
 } from 'react';
 import { Platform } from 'react-native';
-import { FirebaseError } from 'firebase/app';
 import {
   GoogleAuthProvider,
   onAuthStateChanged,
@@ -25,12 +24,23 @@ export const UNAUTHORIZED_ACCOUNT_MESSAGE =
 const NATIVE_CONFIGURATION_MESSAGE =
   'Google sign-in is not configured for this native build yet. Add the Expo OAuth packages, app scheme, and platform client IDs before using mobile sign-in.';
 
+function getFirebaseErrorCode(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
+    return null;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : null;
+}
+
 function getGoogleSignInErrorMessage(error: unknown): string {
-  if (!(error instanceof FirebaseError)) {
+  const code = getFirebaseErrorCode(error);
+
+  if (!code) {
     return 'Unable to sign in with Google. Please try again.';
   }
 
-  switch (error.code) {
+  switch (code) {
     case 'auth/popup-closed-by-user':
     case 'auth/cancelled-popup-request':
       return 'Sign-in was cancelled.';
@@ -43,7 +53,7 @@ function getGoogleSignInErrorMessage(error: unknown): string {
     case 'auth/account-exists-with-different-credential':
       return 'This account already uses a different sign-in method.';
     default:
-      return 'Google sign-in failed. Please try again.';
+      return `Google sign-in failed (${code}). Please try again.`;
   }
 }
 
@@ -98,7 +108,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
+      console.info('[Auth] Google signInWithPopup started.');
       const result = await signInWithPopup(auth, provider);
+      console.info('[Auth] Google signInWithPopup resolved.');
 
       if (!isAuthorizedUser(result.user)) {
         await firebaseSignOut(auth);
@@ -107,8 +119,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return;
       }
 
+      setError(null);
       setUser(result.user);
     } catch (signInError) {
+      const errorCode = getFirebaseErrorCode(signInError);
+      console.warn('[Auth] Google signInWithPopup rejected.', {
+        code: errorCode ?? 'unknown',
+      });
+
       if (signInError instanceof Error && signInError.message === UNAUTHORIZED_ACCOUNT_MESSAGE) {
         setError(UNAUTHORIZED_ACCOUNT_MESSAGE);
       } else if (signInError instanceof Error && signInError.message === NATIVE_CONFIGURATION_MESSAGE) {
