@@ -8,11 +8,18 @@ import {
 } from 'react';
 import { Platform } from 'react-native';
 import {
+  GoogleSignin,
+  isCancelledResponse,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
+import {
   GoogleAuthProvider,
   onAuthStateChanged,
+  signInWithCredential,
   signInWithPopup,
   signOut as firebaseSignOut,
   User,
+  UserCredential,
 } from 'firebase/auth';
 
 import { auth } from '../services/firebase';
@@ -22,7 +29,10 @@ export const UNAUTHORIZED_ACCOUNT_MESSAGE =
   'Access restricted. Please login using your official domain email.';
 
 const NATIVE_CONFIGURATION_MESSAGE =
-  'Google sign-in is not configured for this native build yet. Add the Expo OAuth packages, app scheme, and platform client IDs before using mobile sign-in.';
+  'Google sign-in is not configured for this native build yet. Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID and rebuild the native app.';
+
+const NATIVE_ID_TOKEN_MESSAGE =
+  'Google sign-in did not return an ID token. Please check the native Google configuration.';
 
 function getFirebaseErrorCode(error: unknown): string | null {
   if (typeof error !== 'object' || error === null || !('code' in error)) {
@@ -38,6 +48,10 @@ function getGoogleSignInErrorMessage(error: unknown): string {
 
   if (!code) {
     return 'Unable to sign in with Google. Please try again.';
+  }
+
+  if (code === statusCodes.SIGN_IN_CANCELLED) {
+    return 'Sign-in was cancelled.';
   }
 
   switch (code) {
@@ -102,15 +116,42 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setIsSigningIn(true);
 
     try {
-      if (Platform.OS !== 'web') {
-        throw new Error(NATIVE_CONFIGURATION_MESSAGE);
-      }
+      let result: UserCredential;
 
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
-      console.info('[Auth] Google signInWithPopup started.');
-      const result = await signInWithPopup(auth, provider);
-      console.info('[Auth] Google signInWithPopup resolved.');
+      if (Platform.OS === 'web') {
+        const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        console.info('[Auth] Google signInWithPopup started.');
+        result = await signInWithPopup(auth, provider);
+        console.info('[Auth] Google signInWithPopup resolved.');
+      } else {
+        const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+
+        if (!webClientId) {
+          throw new Error(NATIVE_CONFIGURATION_MESSAGE);
+        }
+
+        GoogleSignin.configure({ webClientId });
+
+        if (Platform.OS === 'android') {
+          await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+        }
+
+        const googleResponse = await GoogleSignin.signIn();
+
+        if (isCancelledResponse(googleResponse)) {
+          return;
+        }
+
+        const { idToken } = googleResponse.data;
+
+        if (!idToken) {
+          throw new Error(NATIVE_ID_TOKEN_MESSAGE);
+        }
+
+        const credential = GoogleAuthProvider.credential(idToken);
+        result = await signInWithCredential(auth, credential);
+      }
 
       if (!isAuthorizedUser(result.user)) {
         await firebaseSignOut(auth);
@@ -123,8 +164,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setUser(result.user);
     } catch (signInError) {
       const errorCode = getFirebaseErrorCode(signInError);
-      console.warn('[Auth] Google signInWithPopup rejected.', {
+      console.warn('[Auth] Google sign-in failed.', {
         code: errorCode ?? 'unknown',
+        message:
+          signInError instanceof Error
+            ? signInError.message
+            : String(signInError),
       });
 
       if (signInError instanceof Error && signInError.message === UNAUTHORIZED_ACCOUNT_MESSAGE) {

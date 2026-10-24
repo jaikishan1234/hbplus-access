@@ -42,3 +42,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+
+# JVM crash logs
+hs_err_pid*.log
+replay_pid*.log
