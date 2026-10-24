@@ -1,16 +1,31 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-export default function GoogleSignInButton() {
+interface GoogleSignInButtonProps {
+  disabled?: boolean;
+  loading?: boolean;
+  onPress: () => void;
+}
+
+export default function GoogleSignInButton({
+  disabled = false,
+  loading = false,
+  onPress,
+}: GoogleSignInButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Continue with Google"
-      style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+      accessibilityState={{ busy: loading, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, disabled && styles.buttonDisabled]}
     >
       <View style={styles.icon}>
         <Text style={styles.iconText}>G</Text>
       </View>
-      <Text style={styles.buttonText}>Continue with Google</Text>
+      <Text style={styles.buttonText}>
+        {loading ? 'Signing in…' : 'Continue with Google'}
+      </Text>
     </Pressable>
   );
 }
@@ -32,6 +47,9 @@ const styles = StyleSheet.create({
   buttonPressed: {
     backgroundColor: '#A91E24',
     transform: [{ scale: 0.99 }],
+  },
+  buttonDisabled: {
+    opacity: 0.65,
   },
   icon: {
     width: 24,

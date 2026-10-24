@@ -2,8 +2,11 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 
 import GoogleSignInButton from '../components/GoogleSignInButton';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
+  const { error, isSigningIn, signInWithGoogle } = useAuth();
+
   return (
     <View style={styles.container}>
       <View style={styles.backgroundAccent} />
@@ -25,7 +28,13 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          <GoogleSignInButton />
+          <GoogleSignInButton
+            disabled={isSigningIn}
+            loading={isSigningIn}
+            onPress={signInWithGoogle}
+          />
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <View style={styles.restrictionNote}>
             <View style={styles.lockDot} />
@@ -142,6 +151,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 22,
     paddingHorizontal: 2,
+  },
+  errorText: {
+    marginTop: 16,
+    color: '#B42318',
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
   },
   lockDot: {
     width: 6,
