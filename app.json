@@ -9,7 +9,10 @@
     "ios": {
       "bundleIdentifier": "com.hbplus.access",
       "googleServicesFile": "./GoogleService-Info.plist",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.hbplus.access",
@@ -27,6 +30,12 @@
     },
     "plugins": [
       "@react-native-google-signin/google-signin"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "eb8e58b5-2f56-4dc0-bf37-b513798ebc11"
+      }
+    },
+    "owner": "codingflex"
   }
 }
