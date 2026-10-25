@@ -17,6 +17,9 @@ HB+ Access is an internal workspace sign-in application for the HB+ team. It use
 - Firestore profile initialization at `users/{firebaseAuthUid}`.
 - Local Firestore Security Rules in `firestore.rules`.
 - Trusted Firebase Auth custom-claim reading for `admin` and default `user` roles.
+- Browser Google sign-in and logout tested against the development environment.
+- User profiles successfully created and persisted in the development Firestore project.
+- Role-aware Dashboard display tested with both an admin-claim account and a standard account.
 
 The Dashboard is currently a placeholder with a sign-out action.
 
@@ -69,6 +72,20 @@ npm run web
 
 This runs `expo start --web`.
 
+## Build the Web app
+
+Create a production Web export with:
+
+```bash
+npx expo export --platform web
+```
+
+The generated Web app is written to:
+
+```text
+dist/
+```
+
 ## Firebase Authentication setup
 
 1. Create or select the Firebase project used by the environment variables.
@@ -113,6 +130,13 @@ The client cannot assign or change claims, and roles are not stored in the clien
 
 No role-specific Firestore collections or operations currently exist. If they are added, their rules must check `request.auth.token.role` directly and must not trust a profile field supplied by the client.
 
+Development role verification used two accounts:
+
+- A development account with the trusted Firebase Auth custom claim `role: "admin"` displayed `Admin workspace`.
+- A second development account without the admin claim displayed `User workspace`.
+
+The admin claim was assigned once using a Firebase Admin SDK script run in Google Cloud Shell. No backend service was deployed. The client cannot assign or change this claim.
+
 This repository does not currently include Firebase CLI configuration such as `firebase.json`, and rule deployment has not been verified here. After installing and configuring the Firebase CLI for the intended project, deploy the rules with:
 
 ```bash
@@ -126,6 +150,8 @@ Alternatively, review and publish the contents of `firestore.rules` through the 
 Users must have a verified email address whose domain is exactly `@hbplus.fit`, case-insensitively, for production access.
 
 Development builds additionally allow verified `@gmail.com` accounts in `src/utils/domainValidation.ts` so the Dashboard can be tested locally. This exception is controlled by `__DEV__` and is not enabled in production builds. Firestore production rules still accept only verified `@hbplus.fit` accounts, so Gmail profile writes will be rejected when those rules are active.
+
+The current `.env` targets the production Firebase project. `.env.production.local` is a Git-ignored backup of the production configuration. Neither file is documented with or should expose actual environment values.
 
 ## Android setup
 
@@ -149,8 +175,13 @@ npx.cmd tsc --noEmit
 ## Current limitations and not-yet-implemented features
 
 - The Dashboard remains a placeholder.
+- Separate admin-only routes are not implemented.
+- Actual admin-only features are not implemented.
+- Admin-only Firestore collections are not implemented.
 - No registration flow is implemented.
-- No trusted backend or role-assignment workflow exists yet; all accounts therefore behave as `user` until trusted claims are configured.
-- Firestore rule deployment and live Firestore profile writes require runtime verification.
+- No persistent backend role-assignment workflow exists; the tested admin claim was assigned by a one-time trusted script.
+- Production deployment has not been completed.
+- Live production Google authentication and Firestore profile testing have not been completed.
+- Firestore rule deployment status must still be verified for the production project.
 - iOS runtime authentication has not been verified because an iOS build environment/device is not available on Windows.
 - Web hosting/deployment configuration is not included in the repository; no deployment URL is claimed.
