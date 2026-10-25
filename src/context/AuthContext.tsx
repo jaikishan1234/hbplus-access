@@ -21,8 +21,9 @@ import {
   User,
   UserCredential,
 } from 'firebase/auth';
+import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 
-import { auth } from '../services/firebase';
+import { auth, firestore } from '../services/firebase';
 import { isAuthorizedUser } from '../utils/domainValidation';
 
 export const UNAUTHORIZED_ACCOUNT_MESSAGE =
@@ -33,6 +34,30 @@ const NATIVE_CONFIGURATION_MESSAGE =
 
 const NATIVE_ID_TOKEN_MESSAGE =
   'Google sign-in did not return an ID token. Please check the native Google configuration.';
+const PROFILE_INITIALIZATION_MESSAGE =
+  'We could not initialize your account profile. Please try signing in again.';
+
+async function initializeUserProfile(user: User): Promise<void> {
+  const profileRef = doc(firestore, 'users', user.uid);
+
+  await runTransaction(firestore, async (transaction) => {
+    const existingProfile = await transaction.get(profileRef);
+    const existingData = existingProfile.data();
+
+    transaction.set(
+      profileRef,
+      {
+        uid: user.uid,
+        email: user.email ?? '',
+        displayName: user.displayName ?? null,
+        photoURL: user.photoURL ?? null,
+        createdAt: existingData?.createdAt ?? serverTimestamp(),
+        lastLoginAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+  });
+}
 
 function getFirebaseErrorCode(error: unknown): string | null {
   if (typeof error !== 'object' || error === null || !('code' in error)) {
@@ -100,7 +125,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (!isAuthorizedUser(nextUser)) {
         setUser(null);
         setError(UNAUTHORIZED_ACCOUNT_MESSAGE);
-        await firebaseSignOut(auth);
+        await firebaseSignOut(auth).catch(() => undefined);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        await initializeUserProfile(nextUser);
+      } catch {
+        setUser(null);
+        setError(PROFILE_INITIALIZATION_MESSAGE);
+        await firebaseSignOut(auth).catch(() => undefined);
         setIsLoading(false);
         return;
       }
@@ -154,10 +189,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       if (!isAuthorizedUser(result.user)) {
-        await firebaseSignOut(auth);
         setUser(null);
+        await firebaseSignOut(auth).catch(() => undefined);
         setError(UNAUTHORIZED_ACCOUNT_MESSAGE);
         return;
+      }
+
+      try {
+        await initializeUserProfile(result.user);
+      } catch {
+        setUser(null);
+        await firebaseSignOut(auth).catch(() => undefined);
+        throw new Error(PROFILE_INITIALIZATION_MESSAGE);
       }
 
       setError(null);
@@ -172,7 +215,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
             : String(signInError),
       });
 
-      if (signInError instanceof Error && signInError.message === UNAUTHORIZED_ACCOUNT_MESSAGE) {
+      if (signInError instanceof Error && signInError.message === PROFILE_INITIALIZATION_MESSAGE) {
+        setError(PROFILE_INITIALIZATION_MESSAGE);
+      } else if (signInError instanceof Error && signInError.message === UNAUTHORIZED_ACCOUNT_MESSAGE) {
         setError(UNAUTHORIZED_ACCOUNT_MESSAGE);
       } else if (signInError instanceof Error && signInError.message === NATIVE_CONFIGURATION_MESSAGE) {
         setError(NATIVE_CONFIGURATION_MESSAGE);

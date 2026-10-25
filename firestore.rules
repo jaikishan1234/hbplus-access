@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function verifiedHbPlusUser() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email is string
+        && request.auth.token.email.matches('(?i)^[^@]+@hbplus\\.fit$');
+    }
+
+    function hasValidProfileFields(profile) {
+      return profile.keys().hasOnly([
+          'uid',
+          'email',
+          'displayName',
+          'photoURL',
+          'createdAt',
+          'lastLoginAt'
+        ])
+        && profile.uid is string
+        && profile.email is string
+        && (profile.displayName == null || profile.displayName is string)
+        && (profile.photoURL == null || profile.photoURL is string)
+        && profile.createdAt is timestamp
+        && profile.lastLoginAt is timestamp;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+
+      allow create: if verifiedHbPlusUser()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && hasValidProfileFields(request.resource.data);
+
+      allow update: if verifiedHbPlusUser()
+        && request.auth.uid == uid
+        && resource.data.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt == resource.data.createdAt
+        && hasValidProfileFields(request.resource.data);
+
+      allow delete: if false;
+    }
+  }
+}
