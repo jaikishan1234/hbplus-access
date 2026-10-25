@@ -3,11 +3,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 export default function DashboardScreen() {
-  const { signOut } = useAuth();
+  const { role, signOut } = useAuth();
 
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Dashboard placeholder</Text>
+      <Text style={styles.roleText}>
+        {role === 'admin' ? 'Admin workspace' : 'User workspace'}
+      </Text>
       <Pressable accessibilityRole="button" onPress={signOut} style={styles.logoutButton}>
         <Text style={styles.logoutText}>Sign out</Text>
       </Pressable>
@@ -26,6 +29,11 @@ const styles = StyleSheet.create({
     color: '#171717',
     fontSize: 18,
     fontWeight: '600',
+  },
+  roleText: {
+    marginTop: 8,
+    color: '#6B6866',
+    fontSize: 14,
   },
   logoutButton: {
     marginTop: 20,

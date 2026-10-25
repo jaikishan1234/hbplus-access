@@ -37,6 +37,17 @@ const NATIVE_ID_TOKEN_MESSAGE =
 const PROFILE_INITIALIZATION_MESSAGE =
   'We could not initialize your account profile. Please try signing in again.';
 
+export type UserRole = 'admin' | 'user';
+
+async function getUserRole(user: User): Promise<UserRole> {
+  try {
+    const tokenResult = await user.getIdTokenResult();
+    return tokenResult.claims.role === 'admin' ? 'admin' : 'user';
+  } catch {
+    return 'user';
+  }
+}
+
 async function initializeUserProfile(user: User): Promise<void> {
   const profileRef = doc(firestore, 'users', user.uid);
 
@@ -98,6 +109,7 @@ function getGoogleSignInErrorMessage(error: unknown): string {
 
 export interface AuthContextValue {
   user: User | null;
+  role: UserRole;
   isAuthenticated: boolean;
   isLoading: boolean;
   isSigningIn: boolean;
@@ -110,6 +122,7 @@ export const AuthContext = createContext<AuthContextValue | undefined>(undefined
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<UserRole>('user');
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -118,12 +131,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return onAuthStateChanged(auth, async (nextUser) => {
       if (!nextUser) {
         setUser(null);
+        setRole('user');
         setIsLoading(false);
         return;
       }
 
       if (!isAuthorizedUser(nextUser)) {
         setUser(null);
+        setRole('user');
         setError(UNAUTHORIZED_ACCOUNT_MESSAGE);
         await firebaseSignOut(auth).catch(() => undefined);
         setIsLoading(false);
@@ -134,6 +149,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         await initializeUserProfile(nextUser);
       } catch {
         setUser(null);
+        setRole('user');
         setError(PROFILE_INITIALIZATION_MESSAGE);
         await firebaseSignOut(auth).catch(() => undefined);
         setIsLoading(false);
@@ -141,6 +157,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       setUser(nextUser);
+      setRole(await getUserRole(nextUser));
       setError(null);
       setIsLoading(false);
     });
@@ -190,6 +207,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (!isAuthorizedUser(result.user)) {
         setUser(null);
+        setRole('user');
         await firebaseSignOut(auth).catch(() => undefined);
         setError(UNAUTHORIZED_ACCOUNT_MESSAGE);
         return;
@@ -199,12 +217,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         await initializeUserProfile(result.user);
       } catch {
         setUser(null);
+        setRole('user');
         await firebaseSignOut(auth).catch(() => undefined);
         throw new Error(PROFILE_INITIALIZATION_MESSAGE);
       }
 
       setError(null);
       setUser(result.user);
+      setRole(await getUserRole(result.user));
     } catch (signInError) {
       const errorCode = getFirebaseErrorCode(signInError);
       console.warn('[Auth] Google sign-in failed.', {
@@ -233,10 +253,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setError(null);
     await firebaseSignOut(auth);
     setUser(null);
+    setRole('user');
   }, []);
 
   const value: AuthContextValue = {
     user,
+    role,
     isAuthenticated: Boolean(user),
     isLoading,
     isSigningIn,
