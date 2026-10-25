@@ -317,12 +317,13 @@ The generated static Web files are written to `dist/`.
 | Unit tests | Verified | Seven tests passed with `npm test`. |
 | TypeScript | Verified | `npx.cmd tsc --noEmit` passed. |
 | Web export | Verified | `npx.cmd expo export --platform web` succeeded; `dist/index.html` and `dist/_redirects` were verified. |
-| Production Google sign-in | Not verified | No live production authentication test has been completed. |
-| Production Firestore persistence | Not verified | No live production profile-write test has been completed. |
+| Production login page | Verified | The deployed Netlify login page loads successfully and shows the expected `@hbplus.fit` restriction for a personal email. |
+| Production Google sign-in | Partially verified | Live sign-in with an eligible company `@hbplus.fit` account remains unverified because no company test account is available; this does not indicate a production failure. |
+| Production Firestore persistence | Not verified | Live production profile creation/persistence with an eligible company account remains pending for the same reason. |
 | Production Firestore rules | Not verified | Confirmation that the production rules are deployed remains pending. |
 | Android native authentication | Verified | The native debug build succeeded and Google Sign-In was tested on an Android device connected over USB. |
 | Android role-based access | Not verified | Admin-versus-regular-user behavior has not yet been tested on Android. |
-| iOS authentication | Not verified | Not tested in an iOS simulator or on a physical device. |
+| iOS authentication | Not verified | Configuration exists, but Apple Developer signing requirements were not completed; no simulator or device test is claimed. |
 | Automated unit tests | Verified | Seven focused tests passed with Node.js's built-in `node:test` runner. No additional testing dependencies were installed. |
 | Component/integration/E2E tests | Not configured | No broader test stack is included. |
 
@@ -340,9 +341,13 @@ Native Google Sign-In requires a development build. The native OAuth client IDs,
 
 ## Deployment to Netlify
 
-No Netlify configuration or live deployment URL currently exists in the repository.
+The app has been deployed successfully to Netlify through the GitHub-connected deployment:
 
-To prepare a deployment:
+[https://hbplus-access.netlify.app/](https://hbplus-access.netlify.app/)
+
+The custom Netlify domain `hbplus-access.netlify.app` was added to Firebase Authentication Authorized Domains in the production `hbplus-access` project. The deployed login page loads successfully in the browser and displays the intended restriction to authorized `@hbplus.fit` accounts.
+
+For future deployments:
 
 1. Select the intended production environment values before exporting. Do not export production while `.env` points at a development project.
 2. Confirm the Firebase production Google provider and authorized domains.
@@ -352,8 +357,8 @@ To prepare a deployment:
    npx expo export --platform web
    ```
 
-4. Publish the generated `dist/` directory through Netlify.
-5. Add the final Netlify hostname to Firebase Authentication > Settings > Authorized domains.
+4. Publish the generated `dist/` directory through the connected Netlify deployment.
+5. Confirm the deployed hostname remains listed in Firebase Authentication > Settings > Authorized domains.
 6. The repository includes `public/_redirects` with this exact SPA fallback rule:
 
    ```text
@@ -362,7 +367,7 @@ To prepare a deployment:
 
    Expo copies it to `dist/_redirects` during Web export. Netlify uses it to serve `index.html` for direct navigation and page refreshes at `/dashboard`, `/admin`, and other client-side paths before the React Native Web navigator handles the URL.
 
-Do not commit `.env` or `.env.production.local`, and do not claim a deployment URL until Netlify reports a successful deployment.
+Do not commit `.env` or `.env.production.local`. The current deployment URL is documented above; no additional deployment is performed by this README.
 
 ## Troubleshooting
 
@@ -433,8 +438,7 @@ Additional test and deployment paths:
 - Add admin-only Firestore collections and rules using trusted Auth claims.
 - Add a permanent trusted role-assignment/admin-management service.
 - Expand the focused unit-test coverage and add end-to-end tests if the project scope requires them.
-- Complete live production authentication and Firestore verification.
-- Complete Netlify deployment and configure the deployed authorized domain.
+- Complete live production authentication and Firestore verification with an eligible company account.
 - Validate Android role-based access and iOS authentication on their target environments.
 - Consider a dedicated development rules file and Firebase CLI configuration for repeatable environment deployment.
 
@@ -453,7 +457,7 @@ Additional test and deployment paths:
 - [ ] Production Google sign-in and Firestore profile persistence are live-tested.
 - [ ] Firestore rules are confirmed deployed to the intended production project.
 - [x] Web export was generated and verified; regenerate it after future source changes.
-- [ ] Netlify deployment is completed.
-- [ ] Netlify URL is added to Firebase Authentication Authorized Domains.
-- [ ] Final browser verification is completed against the deployed site.
+- [x] Netlify deployment is completed through the GitHub-connected deployment.
+- [x] Netlify URL is added to Firebase Authentication Authorized Domains.
+- [x] Deployed login page loads successfully in the browser and shows the expected domain restriction.
 - [ ] No environment values, credentials, private keys, or test-account identifiers are committed.
