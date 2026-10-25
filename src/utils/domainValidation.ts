@@ -1,4 +1,4 @@
-import { User } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 
 export const AUTHORIZED_EMAIL_DOMAIN = '@hbplus.fit';
 const DEVELOPMENT_EMAIL_DOMAIN = '@gmail.com';

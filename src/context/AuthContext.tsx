@@ -25,6 +25,8 @@ import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 
 import { auth, firestore } from '../services/firebase';
 import { isAuthorizedUser } from '../utils/domainValidation';
+import { resolveUserRole } from '../utils/roleResolution';
+import type { UserRole } from '../utils/roleResolution';
 
 export const UNAUTHORIZED_ACCOUNT_MESSAGE =
   'Access restricted. Please login using your official domain email.';
@@ -37,12 +39,12 @@ const NATIVE_ID_TOKEN_MESSAGE =
 const PROFILE_INITIALIZATION_MESSAGE =
   'We could not initialize your account profile. Please try signing in again.';
 
-export type UserRole = 'admin' | 'user';
+export type { UserRole } from '../utils/roleResolution';
 
 async function getUserRole(user: User): Promise<UserRole> {
   try {
     const tokenResult = await user.getIdTokenResult();
-    return tokenResult.claims.role === 'admin' ? 'admin' : 'user';
+    return resolveUserRole(tokenResult.claims);
   } catch {
     return 'user';
   }
