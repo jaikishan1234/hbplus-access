@@ -26,6 +26,8 @@ The repository contains an Expo application targeting Web and configured native 
 - Logout clears Firebase authentication and returns the Web URL to `/`.
 - Firestore profile initialization at `users/{firebaseAuthUid}`.
 - Trusted Firebase Auth custom-claim reading for `admin` and default `user` roles.
+- Seven focused unit tests for domain validation and role resolution using Node.js's built-in `node:test` runner.
+- Netlify SPA fallback in `public/_redirects` for client-side routes.
 - Google sign-in, logout, development profile persistence, and role-aware Dashboard display were manually tested in the development environment.
 
 ### Incomplete or not implemented
@@ -61,6 +63,9 @@ The application uses a small provider-and-screen architecture without a routing 
 - `src/screens/AdminScreen.tsx` renders the admin-only Web screen when the trusted admin claim is present.
 - `src/components/GoogleSignInButton.tsx` renders the branded Google button, loading state, and accessibility state.
 - `src/utils/domainValidation.ts` applies the verified-email and development/production domain rules.
+- `src/utils/roleResolution.ts` maps trusted Firebase Auth claims to the `admin` or default `user` role.
+- `tests/auth-helpers.test.mjs` contains the focused domain-validation and role-resolution unit tests.
+- `public/_redirects` contains the Netlify SPA fallback rule copied into the Web export.
 - `firestore.rules` contains the repository's Firestore Security Rules for user profiles.
 
 ```mermaid
@@ -284,6 +289,14 @@ Run the TypeScript check:
 npx.cmd tsc --noEmit
 ```
 
+Run the focused unit tests:
+
+```bash
+npm test
+```
+
+The test script uses Node.js's built-in `node:test` runner. It covers seven cases: a valid verified `@hbplus.fit` email, an unrelated domain, malformed or missing email, an unverified email, an exact `admin` claim, a missing role claim, and a non-admin role value. No additional testing dependencies were installed.
+
 Create a production Web export:
 
 ```bash
@@ -297,15 +310,21 @@ The generated static Web files are written to `dist/`.
 | Area | Status | Notes |
 | --- | --- | --- |
 | TypeScript | Verified | `npx.cmd tsc --noEmit` has passed. |
-| Web Google sign-in | Development verified | Browser sign-in was tested against the development environment. |
+| Web Google sign-in | Development verified | Browser Google Sign-In was tested against the development environment. |
 | Logout | Development verified | Logout returned the app to the login state. |
-| Firestore profile persistence | Development verified | Profile creation and subsequent persistence were tested in the development project. |
-| Role-aware Dashboard | Development verified | Admin claim displayed Admin Dashboard; account without the claim displayed User Dashboard. |
+| Firestore profile persistence | Development verified | Web profile creation and subsequent persistence were tested in the development project. |
+| Role-aware Dashboard | Development verified | Web admin-versus-regular-user routing was tested in the development environment. |
+| Unit tests | Verified | Seven tests passed with `npm test`. |
+| TypeScript | Verified | `npx.cmd tsc --noEmit` passed. |
+| Web export | Verified | `npx.cmd expo export --platform web` succeeded; `dist/index.html` and `dist/_redirects` were verified. |
 | Production Google sign-in | Not verified | No live production authentication test has been completed. |
 | Production Firestore persistence | Not verified | No live production profile-write test has been completed. |
-| Android native authentication | Not verified in this documentation update | Requires a configured native development build. |
-| iOS authentication | Not verified | Windows environment has no iOS build/device validation. |
-| Automated test suite | Not present | No Jest, Detox, or end-to-end test suite is configured. |
+| Production Firestore rules | Not verified | Confirmation that the production rules are deployed remains pending. |
+| Android native authentication | Verified | The native debug build succeeded and Google Sign-In was tested on an Android device connected over USB. |
+| Android role-based access | Not verified | Admin-versus-regular-user behavior has not yet been tested on Android. |
+| iOS authentication | Not verified | Not tested in an iOS simulator or on a physical device. |
+| Automated unit tests | Verified | Seven focused tests passed with Node.js's built-in `node:test` runner. No additional testing dependencies were installed. |
+| Component/integration/E2E tests | Not configured | No broader test stack is included. |
 
 ## Android and iOS setup
 
@@ -317,7 +336,7 @@ The generated static Web files are written to `dist/`.
 - iOS Firebase file: `./GoogleService-Info.plist`.
 - `@react-native-google-signin/google-signin` Expo plugin.
 
-Native Google Sign-In requires a development build. The native OAuth client IDs, package/bundle identifiers, SHA configuration, and URL scheme settings must be configured in Firebase/Google Cloud for the target build. No native build is performed by the Web commands in this README.
+Native Google Sign-In requires a development build. The native OAuth client IDs, package/bundle identifiers, SHA configuration, and URL scheme settings must be configured in Firebase/Google Cloud for the target build. The native Android debug build succeeded and Google Sign-In was tested on a USB-connected Android device. Android role-based access remains untested. iOS has not been verified in a simulator or on a device. No native build is performed by the Web commands in this README.
 
 ## Deployment to Netlify
 
@@ -335,13 +354,13 @@ To prepare a deployment:
 
 4. Publish the generated `dist/` directory through Netlify.
 5. Add the final Netlify hostname to Firebase Authentication > Settings > Authorized domains.
-6. If direct refreshes of `/dashboard` or `/admin` need SPA fallback handling, configure Netlify to serve `/index.html` for unmatched paths. A common `_redirects` entry is:
+6. The repository includes `public/_redirects` with this exact SPA fallback rule:
 
    ```text
    /* /index.html 200
    ```
 
-   This redirect file is not currently present in the repository.
+   Expo copies it to `dist/_redirects` during Web export. Netlify uses it to serve `index.html` for direct navigation and page refreshes at `/dashboard`, `/admin`, and other client-side paths before the React Native Web navigator handles the URL.
 
 Do not commit `.env` or `.env.production.local`, and do not claim a deployment URL until Netlify reports a successful deployment.
 
@@ -400,16 +419,23 @@ The navigator waits for auth initialization. Signed-out users are sent to `/`; a
         └── domainValidation.ts
 ```
 
+Additional test and deployment paths:
+
+- `tests/auth-helpers.test.mjs` — Node.js built-in unit tests for domain validation and role resolution.
+- `src/utils/domainValidation.ts` — verified-email and environment-specific domain authorization.
+- `src/utils/roleResolution.ts` — trusted custom-claim mapping to `admin` or `user`.
+- `public/_redirects` — Netlify SPA fallback copied into `dist/_redirects` during Web export.
+
 ## Limitations and future improvements
 
 - Build a real Dashboard instead of the current placeholder.
 - Add actual admin-only features and separate admin navigation where required.
 - Add admin-only Firestore collections and rules using trusted Auth claims.
 - Add a permanent trusted role-assignment/admin-management service.
-- Add automated unit and end-to-end tests.
+- Expand the focused unit-test coverage and add end-to-end tests if the project scope requires them.
 - Complete live production authentication and Firestore verification.
 - Complete Netlify deployment and configure the deployed authorized domain.
-- Validate native Android and iOS builds on their target environments.
+- Validate Android role-based access and iOS authentication on their target environments.
 - Consider a dedicated development rules file and Firebase CLI configuration for repeatable environment deployment.
 
 ## Submission checklist
@@ -421,10 +447,12 @@ The navigator waits for auth initialization. Signed-out users are sent to `/`; a
 - [x] `.env.example` contains placeholders only.
 - [x] `.env` and `.env.production.local` remain Git-ignored.
 - [x] TypeScript check passes.
+- [x] Seven unit tests pass with `npm test`.
+- [x] Web export succeeds and `dist/index.html` plus `dist/_redirects` are verified.
 - [x] Development Google sign-in, logout, profile persistence, and role display were tested.
 - [ ] Production Google sign-in and Firestore profile persistence are live-tested.
 - [ ] Firestore rules are confirmed deployed to the intended production project.
-- [ ] Web export is regenerated for the final commit.
+- [x] Web export was generated and verified; regenerate it after future source changes.
 - [ ] Netlify deployment is completed.
 - [ ] Netlify URL is added to Firebase Authentication Authorized Domains.
 - [ ] Final browser verification is completed against the deployed site.
